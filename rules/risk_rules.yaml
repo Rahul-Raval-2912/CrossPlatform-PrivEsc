@@ -1,0 +1,177 @@
+# Risk Rules Configuration
+# Defines risk scoring and classification rules for privilege escalation findings
+
+risk_categories:
+  critical:
+    score: 9.0
+    indicators:
+      - "root"
+      - "administrator" 
+      - "system"
+      - "suid"
+      - "setuid"
+      - "writable system service"
+      - "alwaysinstallelevated"
+      - "unquoted service path"
+    mitre_techniques:
+      - "T1068"  # Exploitation for Privilege Escalation
+      - "T1548.001"  # Setuid and Setgid
+      - "T1543.002"  # Systemd Service
+
+  high:
+    score: 7.0
+    indicators:
+      - "sudo"
+      - "admin"
+      - "service"
+      - "cron"
+      - "scheduled"
+      - "nopasswd"
+      - "writable binary"
+      - "dangerous capability"
+    mitre_techniques:
+      - "T1548.003"  # Sudo and Sudo Caching
+      - "T1053.003"  # Cron
+      - "T1053.005"  # Scheduled Task
+      - "T1574"  # Hijack Execution Flow
+
+  medium:
+    score: 5.0
+    indicators:
+      - "writable"
+      - "permission"
+      - "weak acl"
+      - "misconfigured"
+      - "outdated kernel"
+      - "registry"
+    mitre_techniques:
+      - "T1574.011"  # Services Registry Permissions Weakness
+      - "T1134"  # Access Token Manipulation
+      - "T1055"  # Process Injection
+
+  low:
+    score: 3.0
+    indicators:
+      - "information disclosure"
+      - "enumeration"
+      - "version"
+      - "configuration"
+    mitre_techniques:
+      - "T1082"  # System Information Discovery
+      - "T1083"  # File and Directory Discovery
+
+# MITRE ATT&CK Technique Mappings
+mitre_attack:
+  techniques:
+    T1068:
+      name: "Exploitation for Privilege Escalation"
+      description: "Exploitation of a software vulnerability to gain elevated access"
+      
+    T1548:
+      name: "Abuse Elevation Control Mechanism"
+      subtechniques:
+        T1548.001: "Setuid and Setgid"
+        T1548.003: "Sudo and Sudo Caching"
+        
+    T1053:
+      name: "Scheduled Task/Job"
+      subtechniques:
+        T1053.003: "Cron"
+        T1053.005: "Scheduled Task"
+        
+    T1574:
+      name: "Hijack Execution Flow"
+      subtechniques:
+        T1574.011: "Services Registry Permissions Weakness"
+        
+    T1134:
+      name: "Access Token Manipulation"
+      description: "Modify access tokens to operate under different user contexts"
+      
+    T1055:
+      name: "Process Injection"
+      description: "Inject code into processes to evade defenses"
+
+# Platform-specific risk modifiers
+platform_modifiers:
+  linux:
+    high_risk_paths:
+      - "/bin"
+      - "/sbin" 
+      - "/usr/bin"
+      - "/usr/sbin"
+      - "/etc"
+    
+    dangerous_binaries:
+      - "awk"
+      - "find"
+      - "vim"
+      - "nano"
+      - "less"
+      - "more"
+      - "perl"
+      - "python"
+      - "ruby"
+      - "tar"
+      - "zip"
+      - "bash"
+      - "sh"
+      
+  windows:
+    high_risk_paths:
+      - "C:\\Windows\\System32"
+      - "C:\\Windows\\SysWOW64"
+      - "C:\\Program Files"
+      
+    dangerous_privileges:
+      - "SeDebugPrivilege"
+      - "SeBackupPrivilege" 
+      - "SeRestorePrivilege"
+      - "SeTakeOwnershipPrivilege"
+      - "SeLoadDriverPrivilege"
+      - "SeTcbPrivilege"
+      - "SeCreateTokenPrivilege"
+
+# Severity calculation rules
+severity_rules:
+  - condition: "any(critical_indicators) and platform_path_match"
+    severity: "Critical"
+    
+  - condition: "any(high_indicators) and (sudo or service or cron)"
+    severity: "High"
+    
+  - condition: "writable and (system_path or privileged_process)"
+    severity: "High"
+    
+  - condition: "any(medium_indicators)"
+    severity: "Medium"
+    
+  - condition: "default"
+    severity: "Low"
+
+# Mitigation recommendations
+mitigations:
+  suid:
+    - "Remove unnecessary SUID bits: chmod u-s <file>"
+    - "Use capabilities instead of SUID where possible"
+    - "Regularly audit SUID binaries"
+    
+  sudo:
+    - "Restrict sudo access to specific commands"
+    - "Remove NOPASSWD entries where possible"
+    - "Use sudoers.d for modular configuration"
+    
+  service:
+    - "Run services with minimal privileges"
+    - "Use service-specific users instead of root/SYSTEM"
+    - "Implement proper file permissions"
+    
+  cron:
+    - "Secure cron script permissions (644 or 600)"
+    - "Use absolute paths in cron jobs"
+    - "Avoid writable directories in PATH"
+    
+  registry:
+    - "Restrict registry key permissions"
+    - "Remove unnecessary autorun entries"
+    - "Enable UAC and configure properly"
