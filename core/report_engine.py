@@ -1,12 +1,10 @@
 """
-Report Engine Module
-Generates reports with risk scoring and MITRE ATT&CK mapping
+Report Engine Module - Enhanced Visual Output
+Professional reporting with improved formatting
 """
 
 import json
-import yaml
 from datetime import datetime
-from pathlib import Path
 
 class ReportEngine:
     def __init__(self):
@@ -25,27 +23,75 @@ class ReportEngine:
             'Medium': 5.0,
             'Low': 3.0
         }
+        
+        # Color codes for better visual output
+        self.colors = {
+            'Critical': '\033[91m',  # Red
+            'High': '\033[93m',      # Yellow
+            'Medium': '\033[94m',    # Blue
+            'Low': '\033[92m',       # Green
+            'reset': '\033[0m',      # Reset
+            'bold': '\033[1m',       # Bold
+            'header': '\033[95m'     # Magenta
+        }
     
     def calculate_risk_score(self, findings):
         """Calculate overall risk score"""
         if not findings:
             return 0.0
         
-        total_score = sum(self.risk_scores.get(f.get('severity', 'Low'), 3.0) for f in findings)
-        return min(total_score / len(findings), 10.0)
+        severity_counts = {'Critical': 0, 'High': 0, 'Medium': 0, 'Low': 0}
+        for finding in findings:
+            severity = finding.get('severity', 'Low')
+            severity_counts[severity] += 1
+        
+        total_weight = 0
+        weighted_score = 0
+        
+        for severity, count in severity_counts.items():
+            if count > 0:
+                weight = self.risk_scores[severity]
+                weighted_score += weight * count
+                total_weight += count
+        
+        if total_weight == 0:
+            return 0.0
+            
+        average_score = weighted_score / total_weight
+        return min(average_score, 10.0)
     
     def classify_severity(self, finding_type, details):
-        """Classify finding severity based on type and details"""
-        critical_indicators = ['root', 'administrator', 'system', 'suid', 'setuid']
-        high_indicators = ['sudo', 'admin', 'service', 'cron', 'scheduled']
-        
+        """Enhanced severity classification"""
         description = details.get('description', '').lower()
+        finding_details = str(details.get('details', {})).lower()
         
-        if any(indicator in description for indicator in critical_indicators):
+        # Critical patterns
+        critical_patterns = [
+            'system service', 'administrator', 'root', 'suid', 'setuid',
+            'alwaysinstallelevated', 'sedebugprivilege', 'setakeownershipprivilege',
+            'sebackupprivilege', 'serestoreprivilege', 'writable system binary'
+        ]
+        
+        # High patterns
+        high_patterns = [
+            'sudo', 'nopasswd', 'service', 'cron', 'scheduled', 'admin',
+            'writable binary', 'unquoted path', 'dangerous privilege',
+            'seimpersonateprivilege', 'token manipulation', 'gtfobins'
+        ]
+        
+        # Medium patterns
+        medium_patterns = [
+            'writable', 'permission', 'weak acl', 'misconfigured',
+            'registry', 'autorun', 'credential', 'outdated kernel'
+        ]
+        
+        text_to_check = f"{description} {finding_details}"
+        
+        if any(pattern in text_to_check for pattern in critical_patterns):
             return 'Critical'
-        elif any(indicator in description for indicator in high_indicators):
+        elif any(pattern in text_to_check for pattern in high_patterns):
             return 'High'
-        elif 'writable' in description or 'permission' in description:
+        elif any(pattern in text_to_check for pattern in medium_patterns):
             return 'Medium'
         else:
             return 'Low'
@@ -59,15 +105,38 @@ class ReportEngine:
             'service': 'T1543.002',
             'token': 'T1134',
             'registry': 'T1574.011',
-            'scheduled_task': 'T1053.005'
+            'scheduled_task': 'T1053.005',
+            'user_enum': 'T1087',
+            'kernel': 'T1068'
         }
         return mapping.get(finding_type.lower(), 'T1068')
     
+    def get_risk_level_description(self, score):
+        """Get risk level description"""
+        if score >= 8.0:
+            return "CRITICAL RISK - Immediate attention required"
+        elif score >= 6.0:
+            return "HIGH RISK - Significant security concerns"
+        elif score >= 4.0:
+            return "MEDIUM RISK - Security improvements needed"
+        elif score >= 2.0:
+            return "LOW RISK - Minor security issues"
+        else:
+            return "MINIMAL RISK - Good security posture"
+    
     def generate_report(self, findings, os_info, priv_info, output_format='json', output_file=None):
-        """Generate comprehensive report"""
-        # Process findings
+        """Generate enhanced professional report"""
+        
+        # Process and deduplicate findings
         processed_findings = []
+        seen_findings = set()
+        
         for finding in findings:
+            finding_id = f"{finding['type']}_{finding['description']}"
+            if finding_id in seen_findings:
+                continue
+            seen_findings.add(finding_id)
+            
             severity = self.classify_severity(finding['type'], finding)
             mitre_id = self.map_to_mitre(finding['type'])
             
@@ -86,15 +155,20 @@ class ReportEngine:
             }
             processed_findings.append(processed_finding)
         
+        # Calculate overall risk
+        overall_risk = self.calculate_risk_score(processed_findings)
+        risk_description = self.get_risk_level_description(overall_risk)
+        
         # Generate report data
         report_data = {
             'metadata': {
                 'framework': 'PrivEsc-Framework v1.0',
-                'scan_date': datetime.now().isoformat(),
+                'scan_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'target_os': os_info,
                 'current_user': priv_info,
                 'total_findings': len(processed_findings),
-                'overall_risk_score': self.calculate_risk_score(processed_findings)
+                'overall_risk_score': round(overall_risk, 1),
+                'risk_level': risk_description
             },
             'summary': {
                 'critical': len([f for f in processed_findings if f['severity'] == 'Critical']),
@@ -111,52 +185,116 @@ class ReportEngine:
         elif output_format == 'txt':
             self._output_txt(report_data, output_file)
         
-        print(f"\n[+] Report generated: {output_file or 'console'}")
-        print(f"[+] Overall Risk Score: {report_data['metadata']['overall_risk_score']:.1f}/10.0")
+        # Console summary
+        self._print_summary(report_data)
+    
+    def _print_summary(self, data):
+        """Print enhanced console summary"""
+        print(f"\n{self.colors['header']}{'='*70}{self.colors['reset']}")
+        print(f"{self.colors['bold']}SCAN COMPLETED - SUMMARY REPORT{self.colors['reset']}")
+        print(f"{self.colors['header']}{'='*70}{self.colors['reset']}")
+        
+        print(f"{self.colors['bold']}Total Findings:{self.colors['reset']} {data['metadata']['total_findings']}")
+        print(f"{self.colors['bold']}Risk Assessment:{self.colors['reset']} {data['metadata']['risk_level']}")
+        print(f"{self.colors['bold']}Overall Score:{self.colors['reset']} {data['metadata']['overall_risk_score']}/10.0")
+        
+        print(f"\n{self.colors['bold']}Findings Breakdown:{self.colors['reset']}")
+        if data['summary']['critical'] > 0:
+            print(f"  {self.colors['Critical']}● Critical: {data['summary']['critical']}{self.colors['reset']}")
+        if data['summary']['high'] > 0:
+            print(f"  {self.colors['High']}● High: {data['summary']['high']}{self.colors['reset']}")
+        if data['summary']['medium'] > 0:
+            print(f"  {self.colors['Medium']}● Medium: {data['summary']['medium']}{self.colors['reset']}")
+        if data['summary']['low'] > 0:
+            print(f"  {self.colors['Low']}● Low: {data['summary']['low']}{self.colors['reset']}")
+        
+        if data['metadata']['total_findings'] == 0:
+            print(f"  {self.colors['Low']}✓ No vulnerabilities found - System appears secure{self.colors['reset']}")
     
     def _output_json(self, data, output_file):
         """Output JSON format"""
         if output_file:
             with open(output_file, 'w') as f:
                 json.dump(data, f, indent=2)
+            print(f"\n{self.colors['bold']}JSON report saved:{self.colors['reset']} {output_file}")
         else:
             print(json.dumps(data, indent=2))
     
     def _output_txt(self, data, output_file):
-        """Output human-readable text format"""
+        """Output enhanced text format"""
         output = []
-        output.append("=" * 70)
-        output.append("PRIVESC-FRAMEWORK ENUMERATION REPORT")
-        output.append("=" * 70)
-        output.append(f"Scan Date: {data['metadata']['scan_date']}")
-        output.append(f"Target OS: {data['metadata']['target_os']['platform']}")
-        output.append(f"Current User: {data['metadata']['current_user']['user']}")
-        output.append(f"Overall Risk Score: {data['metadata']['overall_risk_score']:.1f}/10.0")
+        
+        # Header
+        output.append("╔" + "═" * 68 + "╗")
+        output.append("║" + " PRIVESC-FRAMEWORK SECURITY ASSESSMENT REPORT ".center(68) + "║")
+        output.append("╚" + "═" * 68 + "╝")
         output.append("")
         
-        output.append("SUMMARY:")
-        output.append(f"  Critical: {data['summary']['critical']}")
-        output.append(f"  High: {data['summary']['high']}")
-        output.append(f"  Medium: {data['summary']['medium']}")
-        output.append(f"  Low: {data['summary']['low']}")
+        # Metadata
+        output.append("📊 SCAN INFORMATION")
+        output.append("─" * 50)
+        output.append(f"Scan Date:        {data['metadata']['scan_date']}")
+        output.append(f"Target System:    {data['metadata']['target_os'].get('platform', 'Unknown')} {data['metadata']['target_os'].get('version', '')}")
+        output.append(f"Current User:     {data['metadata']['current_user'].get('user', 'Unknown')} ({data['metadata']['current_user'].get('level', 'Unknown')})")
+        output.append(f"Framework:        {data['metadata']['framework']}")
         output.append("")
         
-        output.append("FINDINGS:")
-        output.append("-" * 70)
+        # Risk Assessment
+        output.append("🎯 RISK ASSESSMENT")
+        output.append("─" * 50)
+        output.append(f"Overall Risk Score: {data['metadata']['overall_risk_score']}/10.0")
+        output.append(f"Risk Level:         {data['metadata']['risk_level']}")
+        output.append(f"Total Findings:     {data['metadata']['total_findings']}")
+        output.append("")
         
-        for finding in data['findings']:
-            output.append(f"[{finding['id']}] {finding['severity']} - {finding['type']}")
-            output.append(f"    Description: {finding['description']}")
-            output.append(f"    MITRE ATT&CK: {finding['mitre_attack']['technique_id']} - {finding['mitre_attack']['technique_name']}")
-            output.append(f"    Risk Score: {finding['risk_score']}")
-            if finding['mitigation']:
-                output.append(f"    Mitigation: {finding['mitigation']}")
-            output.append("")
+        # Summary
+        output.append("📈 FINDINGS SUMMARY")
+        output.append("─" * 50)
+        output.append(f"🔴 Critical:  {data['summary']['critical']:2d}")
+        output.append(f"🟡 High:      {data['summary']['high']:2d}")
+        output.append(f"🔵 Medium:    {data['summary']['medium']:2d}")
+        output.append(f"🟢 Low:       {data['summary']['low']:2d}")
+        output.append("")
+        
+        # Detailed Findings
+        if data['findings']:
+            output.append("🔍 DETAILED FINDINGS")
+            output.append("═" * 70)
+            
+            # Group by severity
+            for severity in ['Critical', 'High', 'Medium', 'Low']:
+                severity_findings = [f for f in data['findings'] if f['severity'] == severity]
+                if severity_findings:
+                    severity_icons = {'Critical': '🔴', 'High': '🟡', 'Medium': '🔵', 'Low': '🟢'}
+                    output.append(f"\n{severity_icons[severity]} {severity.upper()} SEVERITY FINDINGS")
+                    output.append("─" * 50)
+                    
+                    for finding in severity_findings:
+                        output.append(f"\n[{finding['id']:02d}] {finding['description']}")
+                        output.append(f"     Type: {finding['type'].title()}")
+                        output.append(f"     MITRE ATT&CK: {finding['mitre_attack']['technique_id']} - {finding['mitre_attack']['technique_name']}")
+                        output.append(f"     Risk Score: {finding['risk_score']}/10.0")
+                        
+                        if finding['details']:
+                            output.append(f"     Details: {str(finding['details'])[:100]}...")
+                        
+                        if finding['mitigation']:
+                            output.append(f"     💡 Mitigation: {finding['mitigation']}")
+        else:
+            output.append("✅ NO VULNERABILITIES FOUND")
+            output.append("─" * 50)
+            output.append("The system appears to be properly configured with no obvious")
+            output.append("privilege escalation vulnerabilities detected.")
+        
+        output.append("\n" + "═" * 70)
+        output.append("Report generated by PrivEsc-Framework v1.0")
+        output.append("For more information: https://github.com/your-repo/PrivEsc-Framework")
         
         report_text = "\n".join(output)
         
         if output_file:
-            with open(output_file, 'w') as f:
+            with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(report_text)
+            print(f"\n{self.colors['bold']}Text report saved:{self.colors['reset']} {output_file}")
         else:
             print(report_text)
