@@ -1,0 +1,18 @@
+# Generated reports
+*.json
+*_report.*
+security_report.*
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db

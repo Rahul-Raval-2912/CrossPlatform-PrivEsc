@@ -1,6 +1,6 @@
 """
-Windows Services Enumeration Module
-Identifies service-related privilege escalation opportunities
+Windows Services Enumeration Module - Fixed False Positives
+Identifies genuine service-related privilege escalation opportunities
 """
 
 import subprocess
@@ -15,111 +15,96 @@ def run_command(cmd):
     except:
         return ""
 
+def is_system_protected_path(path):
+    """Check if path is system-protected and should be ignored"""
+    protected_paths = [
+        'c:\\windows\\system32\\svchost.exe',
+        'c:\\windows\\system32\\',
+        'c:\\windows\\syswow64\\',
+        'c:\\program files\\windows defender\\',
+        'c:\\program files (x86)\\windows defender\\'
+    ]
+    
+    path_lower = path.lower()
+    return any(path_lower.startswith(protected) for protected in protected_paths)
+
 def enumerate():
-    """Enumerate Windows service vulnerabilities"""
+    """Enumerate Windows service vulnerabilities - Fixed"""
     findings = []
     
-    # Get all services
-    services_output = run_command('sc query type= service state= all')
+    # Get services with custom binaries only (not svchost.exe)
+    services_output = run_command('wmic service get name,pathname,startname /format:csv')
     
     if services_output:
-        # Parse service names
-        service_names = re.findall(r'SERVICE_NAME: (.+)', services_output)
+        lines = services_output.split('\n')[1:]  # Skip header
+        processed_services = set()  # Avoid duplicates
         
-        for service_name in service_names:
-            service_name = service_name.strip()
-            
-            # Get service configuration
-            service_config = run_command(f'sc qc "{service_name}"')
-            
-            if service_config:
-                # Check for unquoted service paths
-                binary_path_match = re.search(r'BINARY_PATH_NAME\s*:\s*(.+)', service_config)
-                if binary_path_match:
-                    binary_path = binary_path_match.group(1).strip()
+        for line in lines:
+            if line.strip() and ',' in line:
+                parts = line.strip().split(',')
+                if len(parts) >= 4:
+                    name = parts[1].strip()
+                    pathname = parts[2].strip()
+                    startname = parts[3].strip()
                     
-                    # Check for unquoted paths with spaces
-                    if ' ' in binary_path and not (binary_path.startswith('"') and binary_path.endswith('"')):
-                        findings.append({
-                            'type': 'service',
-                            'description': f'Unquoted service path: {service_name}',
-                            'details': {
-                                'service': service_name,
-                                'path': binary_path,
-                                'vulnerability': 'Unquoted Service Path'
-                            },
-                            'mitigation': f'Quote the service path for {service_name}'
-                        })
+                    # Skip if already processed or empty
+                    if not name or not pathname or name in processed_services:
+                        continue
                     
-                    # Check if service binary is writable
-                    # Extract actual executable path
-                    exe_path = binary_path.split()[0].strip('"')
+                    processed_services.add(name)
+                    
+                    # Skip system services (svchost.exe)
+                    if 'svchost.exe' in pathname.lower():
+                        continue
+                    
+                    # Skip system-protected paths
+                    if is_system_protected_path(pathname):
+                        continue
+                    
+                    # Extract executable path
+                    exe_path = pathname.split()[0].strip('"') if pathname.split() else pathname
+                    
+                    # Check for unquoted paths with spaces (real vulnerability)
+                    if ' ' in pathname and not (pathname.startswith('"') and '"' in pathname[1:]):
+                        # Only flag if path contains spaces and is not in system directories
+                        if not is_system_protected_path(exe_path):
+                            findings.append({
+                                'type': 'service',
+                                'description': f'Unquoted service path: {name}',
+                                'details': {
+                                    'service': name,
+                                    'path': pathname,
+                                    'vulnerability': 'Unquoted Service Path'
+                                },
+                                'mitigation': f'Quote the service path for {name}'
+                            })
+                    
+                    # Check if service binary exists and is actually writable
                     if os.path.exists(exe_path):
                         try:
-                            # Check if current user can write to the file
-                            if os.access(exe_path, os.W_OK):
+                            # Only check non-system files
+                            if not is_system_protected_path(exe_path):
+                                # Try to open file for writing (more accurate test)
+                                with open(exe_path, 'r+b'):
+                                    pass
                                 findings.append({
                                     'type': 'service',
-                                    'description': f'Writable service binary: {service_name}',
-                                    'details': {
-                                        'service': service_name,
-                                        'binary_path': exe_path
-                                    },
-                                    'mitigation': f'Restrict write permissions on {exe_path}'
-                                })
-                        except:
-                            pass
-                
-                # Check service permissions
-                service_perms = run_command(f'sc sdshow "{service_name}"')
-                if service_perms and 'SDDL' not in service_perms:
-                    # Look for weak service permissions (simplified check)
-                    if 'Everyone' in service_perms or 'Users' in service_perms:
-                        findings.append({
-                            'type': 'service',
-                            'description': f'Weak service permissions: {service_name}',
-                            'details': {
-                                'service': service_name,
-                                'permissions': service_perms
-                            },
-                            'mitigation': f'Restrict service permissions for {service_name}'
-                        })
-    
-    # Check for services running as SYSTEM with weak configurations
-    wmic_services = run_command('wmic service get name,startname,pathname')
-    if wmic_services:
-        lines = wmic_services.split('\n')[1:]  # Skip header
-        for line in lines:
-            if line.strip():
-                parts = line.strip().split()
-                if len(parts) >= 3:
-                    name = parts[0]
-                    pathname = ' '.join(parts[1:-1]) if len(parts) > 3 else parts[1]
-                    startname = parts[-1]
-                    
-                    # Check for services running as SYSTEM
-                    if 'LocalSystem' in startname or 'SYSTEM' in startname:
-                        # Check if pathname is in a writable directory
-                        writable_dirs = ['C:\\temp', 'C:\\tmp', 'C:\\Users\\Public']
-                        for writable_dir in writable_dirs:
-                            if pathname.lower().startswith(writable_dir.lower()):
-                                findings.append({
-                                    'type': 'service',
-                                    'description': f'SYSTEM service in writable directory: {name}',
+                                    'description': f'Writable service binary: {name}',
                                     'details': {
                                         'service': name,
-                                        'path': pathname,
-                                        'account': startname
+                                        'binary_path': exe_path
                                     },
-                                    'mitigation': f'Move service binary to secure location'
+                                    'mitigation': f'Secure permissions on {exe_path}'
                                 })
+                        except (PermissionError, OSError):
+                            # File is not writable - this is normal and expected
+                            pass
     
-    # Check for AlwaysInstallElevated
+    # Check for AlwaysInstallElevated (real vulnerability)
     always_install_hkcu = run_command('reg query HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated 2>nul')
     always_install_hklm = run_command('reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated 2>nul')
     
     if 'AlwaysInstallElevated' in always_install_hkcu and 'AlwaysInstallElevated' in always_install_hklm:
-        # Check if both are set to 1
         hkcu_value = re.search(r'AlwaysInstallElevated\s+REG_DWORD\s+0x1', always_install_hkcu)
         hklm_value = re.search(r'AlwaysInstallElevated\s+REG_DWORD\s+0x1', always_install_hklm)
         
@@ -135,20 +120,29 @@ def enumerate():
                 'mitigation': 'Disable AlwaysInstallElevated in both HKCU and HKLM'
             })
     
-    # Check for weak service ACLs using accesschk (if available)
-    accesschk_output = run_command('accesschk.exe -uwcqv "Authenticated Users" * 2>nul')
-    if accesschk_output and 'SERVICE_CHANGE_CONFIG' in accesschk_output:
-        services_with_weak_acl = re.findall(r'(\w+)\s+SERVICE_CHANGE_CONFIG', accesschk_output)
-        for service in services_with_weak_acl:
-            findings.append({
-                'type': 'service',
-                'description': f'Service with weak ACL: {service}',
-                'details': {
-                    'service': service,
-                    'permission': 'SERVICE_CHANGE_CONFIG',
-                    'group': 'Authenticated Users'
-                },
-                'mitigation': f'Restrict service permissions for {service}'
-            })
+    # Check for services running from writable directories
+    writable_service_dirs = ['C:\\temp', 'C:\\tmp', 'C:\\Users\\Public']
+    
+    for line in services_output.split('\n')[1:]:
+        if line.strip() and ',' in line:
+            parts = line.strip().split(',')
+            if len(parts) >= 4:
+                name = parts[1].strip()
+                pathname = parts[2].strip()
+                
+                if name and pathname:
+                    for writable_dir in writable_service_dirs:
+                        if pathname.lower().startswith(writable_dir.lower()):
+                            findings.append({
+                                'type': 'service',
+                                'description': f'Service in writable directory: {name}',
+                                'details': {
+                                    'service': name,
+                                    'path': pathname,
+                                    'directory': writable_dir
+                                },
+                                'mitigation': f'Move service binary to secure location'
+                            })
+                            break
     
     return findings
