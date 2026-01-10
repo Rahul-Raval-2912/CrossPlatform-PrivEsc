@@ -2,21 +2,7 @@
 
 **🚀 Advanced Cross-Platform Privilege Escalation Enumeration Framework**
 
-The most comprehensive, automated toolkit for identifying privilege escalation opportunities across Linux and Windows systems. Now enhanced with container detection, network analysis, Active Directory checks, and exploit suggestions.
-
-## 🎯 What Makes Us Better Than Competition
-
-| Feature | PrivEsc-Framework v2.0 | LinPEAS | WinPEAS | PowerUp | BeRoot |
-|---------|------------------------|---------|---------|---------|--------|
-| **Cross-Platform** | ✅ Unified Linux + Windows | ❌ Linux only | ❌ Windows only | ❌ Windows only | ⚠️ Separate tools |
-| **Container Detection** | ✅ Docker, LXC, Kubernetes | ❌ | ❌ | ❌ | ❌ |
-| **Active Directory** | ✅ Advanced AD enumeration | ❌ | ⚠️ Basic | ❌ | ❌ |
-| **Network Analysis** | ✅ Service + config analysis | ⚠️ Basic | ⚠️ Basic | ❌ | ❌ |
-| **Exploit Suggestions** | ✅ CVE mapping + PoC links | ❌ | ❌ | ❌ | ❌ |
-| **Professional Reports** | ✅ JSON + formatted text | ⚠️ Messy output | ⚠️ Messy output | ⚠️ Basic | ⚠️ Basic |
-| **MITRE ATT&CK Mapping** | ✅ Complete mapping | ❌ | ❌ | ❌ | ❌ |
-| **False Positive Control** | ✅ Advanced filtering | ⚠️ High noise | ⚠️ High noise | ⚠️ Medium | ⚠️ High noise |
-| **User-Friendly** | ✅ One-click execution | ⚠️ Complex | ⚠️ Complex | ⚠️ PowerShell req | ⚠️ Complex |
+A comprehensive, automated toolkit for identifying privilege escalation opportunities across Linux and Windows systems. Designed for penetration testers, security auditors, and red/blue team operations.
 
 ## 🚀 Quick Start
 
@@ -170,14 +156,14 @@ kubectl apply -f privesc-scan-job.yaml
 - **T1087**: Account Discovery *(NEW)*
 - **T1046**: Network Service Scanning *(NEW)*
 
-## 🏆 Why Choose PrivEsc-Framework v2.0?
+## 🏆 Key Features
 
-1. **🎯 Most Comprehensive**: Only tool covering containers, AD, and network analysis
-2. **🚀 User-Friendly**: One-click execution vs complex setup of competitors
-3. **📊 Professional Reports**: Clean, actionable output vs messy competitor output
+1. **🎯 Comprehensive Coverage**: Container, network, and AD analysis
+2. **🚀 User-Friendly**: One-click execution with batch/shell scripts
+3. **📊 Professional Reports**: Clean, actionable output with risk scoring
 4. **💥 Exploit Ready**: Direct CVE mapping and PoC links
 5. **🔄 Cross-Platform**: Single tool for both Linux and Windows
-6. **🎨 Modern Design**: Python-based vs outdated PowerShell/Bash scripts
+6. **🎨 Modern Design**: Python-based with advanced filtering
 
 ## ⚖️ Responsible Disclosure
 
@@ -189,4 +175,4 @@ MIT License - Professional security tool for the community.
 
 ---
 
-**PrivEsc-Framework v2.0** - The most advanced privilege escalation enumeration framework available.
+**PrivEsc-Framework v2.0** - Advanced privilege escalation enumeration for security professionals.
