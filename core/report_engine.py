@@ -1,6 +1,6 @@
 """
-Report Engine Module - Enhanced Visual Output
-Professional reporting with improved formatting
+Report Engine Module v2.0 - Enhanced with Exploit Suggestions
+Professional reporting with improved formatting and exploit recommendations
 """
 
 import json
@@ -14,7 +14,9 @@ class ReportEngine:
             'T1053': 'Scheduled Task/Job',
             'T1574': 'Hijack Execution Flow',
             'T1055': 'Process Injection',
-            'T1134': 'Access Token Manipulation'
+            'T1134': 'Access Token Manipulation',
+            'T1087': 'Account Discovery',
+            'T1610': 'Deploy Container'
         }
         
         self.risk_scores = {
@@ -69,20 +71,23 @@ class ReportEngine:
         critical_patterns = [
             'system service', 'administrator', 'root', 'suid', 'setuid',
             'alwaysinstallelevated', 'sedebugprivilege', 'setakeownershipprivilege',
-            'sebackupprivilege', 'serestoreprivilege', 'writable system binary'
+            'sebackupprivilege', 'serestoreprivilege', 'writable system binary',
+            'container escape', 'docker socket', 'privileged container'
         ]
         
         # High patterns
         high_patterns = [
             'sudo', 'nopasswd', 'service', 'cron', 'scheduled', 'admin',
             'writable binary', 'unquoted path', 'dangerous privilege',
-            'seimpersonateprivilege', 'token manipulation', 'gtfobins'
+            'seimpersonateprivilege', 'token manipulation', 'gtfobins',
+            'docker group', 'lxd group', 'active directory'
         ]
         
         # Medium patterns
         medium_patterns = [
             'writable', 'permission', 'weak acl', 'misconfigured',
-            'registry', 'autorun', 'credential', 'outdated kernel'
+            'registry', 'autorun', 'credential', 'outdated kernel',
+            'network service', 'ssh', 'nfs'
         ]
         
         text_to_check = f"{description} {finding_details}"
@@ -107,7 +112,10 @@ class ReportEngine:
             'registry': 'T1574.011',
             'scheduled_task': 'T1053.005',
             'user_enum': 'T1087',
-            'kernel': 'T1068'
+            'kernel': 'T1068',
+            'container': 'T1610',
+            'network': 'T1046',
+            'active_directory': 'T1087.002'
         }
         return mapping.get(finding_type.lower(), 'T1068')
     
@@ -124,8 +132,8 @@ class ReportEngine:
         else:
             return "MINIMAL RISK - Good security posture"
     
-    def generate_report(self, findings, os_info, priv_info, output_format='json', output_file=None):
-        """Generate enhanced professional report"""
+    def generate_report(self, findings, os_info, priv_info, output_format='json', output_file=None, exploit_suggestions=None):
+        """Generate enhanced professional report with exploit suggestions"""
         
         # Process and deduplicate findings
         processed_findings = []
@@ -162,13 +170,14 @@ class ReportEngine:
         # Generate report data
         report_data = {
             'metadata': {
-                'framework': 'PrivEsc-Framework v1.0',
+                'framework': 'PrivEsc-Framework v2.0',
                 'scan_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'target_os': os_info,
                 'current_user': priv_info,
                 'total_findings': len(processed_findings),
                 'overall_risk_score': round(overall_risk, 1),
-                'risk_level': risk_description
+                'risk_level': risk_description,
+                'exploit_suggestions_count': len(exploit_suggestions) if exploit_suggestions else 0
             },
             'summary': {
                 'critical': len([f for f in processed_findings if f['severity'] == 'Critical']),
@@ -176,7 +185,8 @@ class ReportEngine:
                 'medium': len([f for f in processed_findings if f['severity'] == 'Medium']),
                 'low': len([f for f in processed_findings if f['severity'] == 'Low'])
             },
-            'findings': processed_findings
+            'findings': processed_findings,
+            'exploit_suggestions': exploit_suggestions or []
         }
         
         # Output report
@@ -191,25 +201,28 @@ class ReportEngine:
     def _print_summary(self, data):
         """Print enhanced console summary"""
         print(f"\n{self.colors['header']}{'='*70}{self.colors['reset']}")
-        print(f"{self.colors['bold']}SCAN COMPLETED - SUMMARY REPORT{self.colors['reset']}")
+        print(f"{self.colors['bold']}SCAN COMPLETED - ADVANCED SECURITY REPORT{self.colors['reset']}")
         print(f"{self.colors['header']}{'='*70}{self.colors['reset']}")
         
         print(f"{self.colors['bold']}Total Findings:{self.colors['reset']} {data['metadata']['total_findings']}")
         print(f"{self.colors['bold']}Risk Assessment:{self.colors['reset']} {data['metadata']['risk_level']}")
         print(f"{self.colors['bold']}Overall Score:{self.colors['reset']} {data['metadata']['overall_risk_score']}/10.0")
         
+        if data['metadata']['exploit_suggestions_count'] > 0:
+            print(f"{self.colors['bold']}Exploit Suggestions:{self.colors['reset']} {data['metadata']['exploit_suggestions_count']}")
+        
         print(f"\n{self.colors['bold']}Findings Breakdown:{self.colors['reset']}")
         if data['summary']['critical'] > 0:
-            print(f"  {self.colors['Critical']}● Critical: {data['summary']['critical']}{self.colors['reset']}")
+            print(f"  {self.colors['Critical']}🔴 Critical: {data['summary']['critical']}{self.colors['reset']}")
         if data['summary']['high'] > 0:
-            print(f"  {self.colors['High']}● High: {data['summary']['high']}{self.colors['reset']}")
+            print(f"  {self.colors['High']}🟡 High: {data['summary']['high']}{self.colors['reset']}")
         if data['summary']['medium'] > 0:
-            print(f"  {self.colors['Medium']}● Medium: {data['summary']['medium']}{self.colors['reset']}")
+            print(f"  {self.colors['Medium']}🔵 Medium: {data['summary']['medium']}{self.colors['reset']}")
         if data['summary']['low'] > 0:
-            print(f"  {self.colors['Low']}● Low: {data['summary']['low']}{self.colors['reset']}")
+            print(f"  {self.colors['Low']}🟢 Low: {data['summary']['low']}{self.colors['reset']}")
         
         if data['metadata']['total_findings'] == 0:
-            print(f"  {self.colors['Low']}✓ No vulnerabilities found - System appears secure{self.colors['reset']}")
+            print(f"  {self.colors['Low']}✅ No vulnerabilities found - System appears secure{self.colors['reset']}")
     
     def _output_json(self, data, output_file):
         """Output JSON format"""
@@ -221,12 +234,12 @@ class ReportEngine:
             print(json.dumps(data, indent=2))
     
     def _output_txt(self, data, output_file):
-        """Output enhanced text format"""
+        """Output enhanced text format with exploit suggestions"""
         output = []
         
         # Header
         output.append("╔" + "═" * 68 + "╗")
-        output.append("║" + " PRIVESC-FRAMEWORK SECURITY ASSESSMENT REPORT ".center(68) + "║")
+        output.append("║" + " PRIVESC-FRAMEWORK v2.0 SECURITY ASSESSMENT ".center(68) + "║")
         output.append("╚" + "═" * 68 + "╝")
         output.append("")
         
@@ -245,6 +258,8 @@ class ReportEngine:
         output.append(f"Overall Risk Score: {data['metadata']['overall_risk_score']}/10.0")
         output.append(f"Risk Level:         {data['metadata']['risk_level']}")
         output.append(f"Total Findings:     {data['metadata']['total_findings']}")
+        if data['metadata']['exploit_suggestions_count'] > 0:
+            output.append(f"Exploit Suggestions: {data['metadata']['exploit_suggestions_count']}")
         output.append("")
         
         # Summary
@@ -280,15 +295,39 @@ class ReportEngine:
                         
                         if finding['mitigation']:
                             output.append(f"     💡 Mitigation: {finding['mitigation']}")
-        else:
+        
+        # Exploit Suggestions
+        if data.get('exploit_suggestions'):
+            output.append("\n\n🎯 EXPLOIT SUGGESTIONS")
+            output.append("═" * 70)
+            output.append("⚠️  WARNING: Use only for authorized testing!")
+            output.append("")
+            
+            for i, exploit in enumerate(data['exploit_suggestions'], 1):
+                output.append(f"[{i:02d}] {exploit.get('name', 'Unknown').upper()}")
+                output.append(f"     Severity: {exploit.get('severity', 'Unknown')}")
+                output.append(f"     Description: {exploit.get('description', 'No description')}")
+                
+                if 'cve' in exploit:
+                    output.append(f"     CVE: {exploit['cve']}")
+                
+                if 'command' in exploit:
+                    output.append(f"     Command: {exploit['command']}")
+                
+                if 'exploit_url' in exploit:
+                    output.append(f"     Exploit Code: {exploit['exploit_url']}")
+                
+                output.append("")
+        
+        if not data['findings']:
             output.append("✅ NO VULNERABILITIES FOUND")
             output.append("─" * 50)
             output.append("The system appears to be properly configured with no obvious")
             output.append("privilege escalation vulnerabilities detected.")
         
         output.append("\n" + "═" * 70)
-        output.append("Report generated by PrivEsc-Framework v1.0")
-        output.append("For more information: https://github.com/your-repo/PrivEsc-Framework")
+        output.append("Report generated by PrivEsc-Framework v2.0")
+        output.append("Enhanced with container detection, network analysis, and exploit suggestions")
         
         report_text = "\n".join(output)
         

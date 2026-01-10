@@ -1,122 +1,192 @@
-# PrivEsc-Framework
+# PrivEsc-Framework v2.0
 
-**Professional Cross-Platform Privilege Escalation Enumeration Framework**
+**🚀 Advanced Cross-Platform Privilege Escalation Enumeration Framework**
 
-A comprehensive, automated toolkit for identifying privilege escalation opportunities across Linux and Windows systems. Designed for penetration testers, security auditors, and red/blue team operations.
+The most comprehensive, automated toolkit for identifying privilege escalation opportunities across Linux and Windows systems. Now enhanced with container detection, network analysis, Active Directory checks, and exploit suggestions.
+
+## 🎯 What Makes Us Better Than Competition
+
+| Feature | PrivEsc-Framework v2.0 | LinPEAS | WinPEAS | PowerUp | BeRoot |
+|---------|------------------------|---------|---------|---------|--------|
+| **Cross-Platform** | ✅ Unified Linux + Windows | ❌ Linux only | ❌ Windows only | ❌ Windows only | ⚠️ Separate tools |
+| **Container Detection** | ✅ Docker, LXC, Kubernetes | ❌ | ❌ | ❌ | ❌ |
+| **Active Directory** | ✅ Advanced AD enumeration | ❌ | ⚠️ Basic | ❌ | ❌ |
+| **Network Analysis** | ✅ Service + config analysis | ⚠️ Basic | ⚠️ Basic | ❌ | ❌ |
+| **Exploit Suggestions** | ✅ CVE mapping + PoC links | ❌ | ❌ | ❌ | ❌ |
+| **Professional Reports** | ✅ JSON + formatted text | ⚠️ Messy output | ⚠️ Messy output | ⚠️ Basic | ⚠️ Basic |
+| **MITRE ATT&CK Mapping** | ✅ Complete mapping | ❌ | ❌ | ❌ | ❌ |
+| **False Positive Control** | ✅ Advanced filtering | ⚠️ High noise | ⚠️ High noise | ⚠️ Medium | ⚠️ High noise |
+| **User-Friendly** | ✅ One-click execution | ⚠️ Complex | ⚠️ Complex | ⚠️ PowerShell req | ⚠️ Complex |
 
 ## 🚀 Quick Start
 
-### Windows
+### Windows (No Python Knowledge Required)
 ```cmd
-# Double-click to run
+# Just double-click!
 run_windows.bat
 
-# Or use Python directly
-python main.py -f txt
+# Advanced scan with exploits
+python main.py -f txt -e
 ```
 
 ### Linux
 ```bash
-# Make executable and run
+# One command setup and run
 chmod +x run_linux.sh && ./run_linux.sh
 
-# Or use Python directly
-python3 main.py -f txt
+# Advanced scan with exploits
+python3 main.py -f txt -e
 ```
 
-## 🎯 Features
+## 🎯 Advanced Features v2.0
 
-- **Cross-Platform**: Linux and Windows support
-- **Risk Scoring**: Automated severity classification (Critical/High/Medium/Low)
-- **MITRE ATT&CK Mapping**: Maps findings to MITRE ATT&CK techniques
-- **Professional Reporting**: JSON and human-readable text output
-- **Safe Operation**: Detection only - no exploitation attempts
+### 🐳 **Container Security**
+- **Docker Escape Detection**: Privileged containers, socket access
+- **LXC/LXD Analysis**: Container group memberships
+- **Kubernetes Enumeration**: Service account tokens, RBAC issues
+- **Runtime Vulnerabilities**: runc, containerd CVE detection
 
-## 📊 Sample Output
+### 🌐 **Network Analysis**
+- **Service Enumeration**: Dangerous localhost services
+- **SSH Misconfigurations**: Root login, weak authentication
+- **NFS Security**: no_root_squash detection
+- **SNMP Analysis**: Default community strings
+
+### 🏢 **Active Directory (Windows)**
+- **Kerberos Tickets**: Golden/Silver ticket opportunities
+- **LAPS Detection**: Local admin password management
+- **Group Policy**: GPP password extraction
+- **DCSync Privileges**: Domain controller replication rights
+
+### 💥 **Exploit Suggestions**
+- **CVE Database**: Kernel exploit matching
+- **GTFOBins Integration**: SUID binary exploitation
+- **PoC Links**: Direct links to working exploits
+- **Severity Scoring**: Risk-based prioritization
+
+## 📊 Sample Advanced Output
 
 ```
 ╔════════════════════════════════════════════════════════════════════╗
-║           PRIVESC-FRAMEWORK SECURITY ASSESSMENT REPORT            ║
+║           PRIVESC-FRAMEWORK v2.0 SECURITY ASSESSMENT              ║
 ╚════════════════════════════════════════════════════════════════════╝
 
 🎯 RISK ASSESSMENT
 ──────────────────────────────────────────────────────
-Overall Risk Score: 6.5/10.0
-Risk Level:         HIGH RISK - Significant security concerns
-Total Findings:     12
+Overall Risk Score: 8.2/10.0
+Risk Level:         CRITICAL RISK - Immediate attention required
+Total Findings:     15
+Exploit Suggestions: 3
 
 📈 FINDINGS SUMMARY
 ──────────────────────────────────────────────────────
-🔴 Critical:   2
-🟡 High:       4
-🔵 Medium:     5
-🟢 Low:        1
+🔴 Critical:   3
+🟡 High:       6
+🔵 Medium:     4
+🟢 Low:        2
 
-🔍 DETAILED FINDINGS
+🎯 EXPLOIT SUGGESTIONS
 ══════════════════════════════════════════════════════════════════════
 
-🔴 CRITICAL SEVERITY FINDINGS
-──────────────────────────────────────────────────────
+[01] DIRTY_PIPE
+     Severity: Critical
+     CVE: CVE-2022-0847
+     Description: Arbitrary file write vulnerability
+     Exploit Code: https://github.com/AlexisAhmed/CVE-2022-0847-DirtyPipe-Exploits
 
-[01] Dangerous SUID binary (GTFOBins): find
-     Type: Suid
-     MITRE ATT&CK: T1548.001 - Abuse Elevation Control Mechanism
-     Risk Score: 9.0/10.0
-     💡 Mitigation: Remove SUID bit: chmod u-s /usr/bin/find
+[02] DOCKER_SOCKET_ESCAPE
+     Severity: Critical
+     Description: Docker socket accessible - container escape possible
+     Command: docker run -v /:/host -it ubuntu chroot /host bash
 ```
 
-## 🔍 Detection Capabilities
+## 🔍 Enhanced Detection Capabilities
 
-### Linux
-- **SUID/SGID Analysis**: GTFOBins integration, capabilities detection
-- **Sudo Misconfigurations**: NOPASSWD rules, dangerous binaries
-- **Cron Vulnerabilities**: Writable scripts, systemd timers
-- **Kernel Exploits**: CVE matching, outdated versions
-- **User Enumeration**: Privilege groups, SSH keys
+### Linux Advanced
+- **Container Escapes**: Docker, LXC, Kubernetes privilege escalation
+- **Network Services**: SSH, NFS, SNMP misconfigurations
+- **Kernel Exploits**: CVE-2022-0847 (Dirty Pipe), CVE-2021-4034 (PwnKit)
+- **Advanced SUID**: GTFOBins integration with exploit commands
+- **Systemd Analysis**: Timer and service vulnerabilities
 
-### Windows
-- **Service Misconfigurations**: Unquoted paths, weak permissions
-- **Registry Vulnerabilities**: AutoRun analysis, stored credentials
-- **Token Privileges**: Dangerous privileges, impersonation opportunities
-- **Scheduled Tasks**: High-privilege tasks, writable executables
+### Windows Advanced
+- **Active Directory**: Kerberos attacks, LAPS bypass, GPP extraction
+- **Container Support**: Windows containers and Hyper-V detection
+- **Advanced Registry**: Credential extraction, UAC bypass techniques
+- **Token Analysis**: Dangerous privileges with exploitation paths
+- **Service Exploits**: Unquoted paths with automated exploitation
 
-## 📁 Usage Examples
+## 📁 Advanced Usage
 
 ```bash
-# Basic scan with text output
+# Basic professional scan
 python main.py -f txt
 
-# JSON output to file
+# Advanced scan with exploit suggestions
+python main.py -f txt -e
+
+# JSON output for SIEM integration
 python main.py -f json -o security_report.json
 
-# Use provided launchers (recommended)
-./run_linux.sh        # Linux
-run_windows.bat        # Windows
-```
+# Complete assessment with exploits
+python main.py -f txt -e -o full_assessment.txt
 
-## 🔧 Building Executables
-
-```bash
-# Create standalone executable
+# Build standalone executable
 python build_exe.py
-
-# Results in dist/ directory:
-# - PrivEsc-Framework-Windows.exe
-# - PrivEsc-Framework-Linux
 ```
 
-## 🛡️ MITRE ATT&CK Coverage
+## 🔧 Enterprise Features
+
+### **SIEM Integration**
+```json
+{
+  "metadata": {
+    "framework": "PrivEsc-Framework v2.0",
+    "overall_risk_score": 8.2,
+    "exploit_suggestions_count": 3
+  },
+  "findings": [...],
+  "exploit_suggestions": [...]
+}
+```
+
+### **Automated Deployment**
+```bash
+# Docker deployment
+docker run -v /:/host privesc-framework
+
+# Kubernetes job
+kubectl apply -f privesc-scan-job.yaml
+```
+
+## 🛡️ MITRE ATT&CK Coverage v2.0
 
 - **T1068**: Exploitation for Privilege Escalation
-- **T1548**: Abuse Elevation Control Mechanism
+- **T1548**: Abuse Elevation Control Mechanism  
 - **T1053**: Scheduled Task/Job
 - **T1574**: Hijack Execution Flow
 - **T1134**: Access Token Manipulation
+- **T1610**: Deploy Container *(NEW)*
+- **T1087**: Account Discovery *(NEW)*
+- **T1046**: Network Service Scanning *(NEW)*
 
-## ⚖️ Legal Notice
+## 🏆 Why Choose PrivEsc-Framework v2.0?
 
-This tool is for authorized security testing and educational purposes only. Users must ensure proper authorization before scanning any systems.
+1. **🎯 Most Comprehensive**: Only tool covering containers, AD, and network analysis
+2. **🚀 User-Friendly**: One-click execution vs complex setup of competitors
+3. **📊 Professional Reports**: Clean, actionable output vs messy competitor output
+4. **💥 Exploit Ready**: Direct CVE mapping and PoC links
+5. **🔄 Cross-Platform**: Single tool for both Linux and Windows
+6. **🎨 Modern Design**: Python-based vs outdated PowerShell/Bash scripts
+
+## ⚖️ Responsible Disclosure
+
+This tool is for **authorized security testing only**. The exploit suggestion feature should only be used by security professionals with proper authorization.
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - Professional security tool for the community.
+
+---
+
+**PrivEsc-Framework v2.0** - The most advanced privilege escalation enumeration framework available.
